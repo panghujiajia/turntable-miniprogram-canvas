@@ -1,0 +1,6 @@
+<view class="container">
+    <canvas animation="{{animationData}}" id="myCanvas" canvas-id="myCanvas"/>
+    <view id="choujiang">
+        <image bindtap='start' src="/images/tbar-pointer.png"></image>
+    </view>
+</view>
