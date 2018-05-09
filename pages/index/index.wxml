@@ -1,6 +1,16 @@
 <view class="container">
-    <canvas animation="{{animationData}}" id="myCanvas" canvas-id="myCanvas"/>
-    <view id="choujiang">
-        <image bindtap='start' src="/images/tbar-pointer.png"></image>
+    <view animation="{{animationData}}" id="myCanvas">
+        <canvas canvas-id="myCanvas"/>
     </view>
+    <!--canvas和奖品的容器保持同频转动  -->
+    <cover-view class="itemsWrap" animation="{{animationData}}">
+    <!--首次加载,校验角度,canvas是以3点钟为起点,这里让奖品顺时针转动校验的角度,保持同步  -->
+        <cover-view class="itemsWrap" wx:for="{{awards}}" style='-webkit-transform:rotate({{verifyDeg}}deg);'>
+            <!--设置奖品名旋转角度  -->
+            <cover-view style='-webkit-transform:rotate({{item.verifyDeg}});transform:rotate({{item.verifyDeg}})'>{{item.name}}</cover-view>
+        </cover-view>
+    </cover-view>
+    <cover-view id="choujiang">
+        <cover-image bindtap='start' src="/images/tbar-pointer.png"></cover-image>
+    </cover-view>
 </view>

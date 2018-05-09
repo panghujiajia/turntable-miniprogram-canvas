@@ -4,12 +4,101 @@ Page({
      * 页面的初始数据
      */
     data: {
-        i: 0,
+        defaultData: {
+            canvasId: 'myCanvas',          //画布ID
+            circleX: 150,                  //圆心起点横坐标
+            circleY: 150,                  //圆心起点纵坐标
+            circleR: 150,                  //半径
+            colorArr: ['red', 'yellow'],   //绘制颜色数组
+            awardsLen: 2                 //扇形数量，同奖品数量，默认或者最少2个
+        },
         animationData: {},
-        lock: true
+        verifyDeg: null,                //转盘校验角度
+        centerPoint: null,              //指针指向奖品中间刻度需要调整的度数
+        lock: true,                     //防止用户多次点击
+        awards: [
+            {
+                'index': 0,
+                'name': '再接再厉'
+            },
+            {
+                'index': 1,
+                'name': '1元话费'
+            },
+            {
+                'index': 2,
+                'name': '2元红包'
+            },
+            {
+                'index': 3,
+                'name': '3元红包'
+            },
+            {
+                'index': 4,
+                'name': '4元话费'
+            },
+            {
+                'index': 5,
+                'name': '5元话费'
+            },
+            {
+                'index': 6,
+                'name': '6元话费'
+            },
+            {
+                'index': 7,
+                'name': '7元话费'
+            }
+        ],
+        runDegs: 0,                     //转盘上一次旋转的角度,默认0
+        runNum:null
     },
 
-    rotateAnimate: function (i,num) {
+    /**
+     * 生命周期函数--监听页面加载
+     */
+    // 设置奖品数量、绘制转盘图、校验转盘显示角度、设置奖品名称旋转角度
+    onLoad: function (options) {
+        var awards = this.data.awards;
+        var defaultData = this.data.defaultData;       //获取默认参数
+        defaultData.awardsLen = Math.max(this.data.awards.length, defaultData.awardsLen);  //根据奖品数据,对扇形绘制数量进行重新赋值
+        var centerPoint = 360 / defaultData.awardsLen / 2;  //指针中心点需要加的角度
+        var verifyDeg = centerPoint + 90; //需要校验的角度
+        for (var i in awards) {
+            awards[i].verifyDeg = i * 360 / defaultData.awardsLen + 'deg';   //设置每个奖品文字的旋转角度
+        }
+        this.setData({
+            awards: awards,
+            verifyDeg: verifyDeg,
+            centerPoint: centerPoint
+        })
+        this.drawTurntable(
+            defaultData.canvasId,
+            defaultData.circleX,
+            defaultData.circleY,
+            defaultData.circleR,
+            defaultData.colorArr,
+            defaultData.awardsLen
+        )
+    },
+
+    // 点击开始按钮
+    start: function () {
+        var awardsLen = this.data.defaultData.awardsLen;    //获取奖品数量
+        var winIndex = Math.round(Math.random() * awardsLen);//根据奖品数量取随机数
+        if( winIndex == null ) return;
+        var winName = winIndex == 0 ? '很遗憾，再接再厉！' : '恭喜您抽中' + this.data.awards[winIndex].name;      //获取奖品名称
+        var lock = this.data.lock;      //获取锁的状态
+        if (lock) {                     //如果开启状态
+            this.rotateAnimate(winIndex, winName);      //调用转盘旋转
+            this.setData({
+                lock: false             //同时上锁
+            })
+        }
+    },
+
+    //旋转动画
+    rotateAnimate: function (winIndex, winName) {
         var that = this;
         var animation = wx.createAnimation({
             transformOrigin: "50% 50%",
@@ -17,134 +106,56 @@ Page({
             timingFunction: "ease-in-out",
             delay: 0
         })
+        this.data.runDegs = this.data.runDegs || 0;
+        var runNum = Math.max(this.data.runNum,3);    //转盘至少需要转的圈数,最少三圈
+        var awardsLen = this.data.defaultData.awardsLen;    //奖品数量
+        var centerPoint = this.data.centerPoint;            //奖品中心点度数
+        var verifyDeg = this.data.verifyDeg;                //校验角度
+        this.data.runDegs = this.data.runDegs + (360 - this.data.runDegs % 360) + (360 * runNum - winIndex * (360 / awardsLen)) - verifyDeg;
         this.animation = animation;
-
-        animation.rotate(1800 * i).step();  //首次点击获取i为0,转盘保持不动,同时启动定时器,让i+1转动
-
+        animation.rotate(this.data.runDegs).step();  //首次点击获取同时启动定时器
         this.setData({
             animationData: animation.export()
         })
-        setTimeout(function () {
-            animation.rotate(1800 * (i + 1) ).step();
-            this.setData({
-                animationData: animation.export()
-            })
-        }.bind(this), 0);
-
         setTimeout(function () {            //同时设置一个跟动画同时间的定时器把锁打开,防止用户重复点击
+            wx.showModal({
+                title : '提示',
+                content:winName,
+                showCancel:false
+            })
             that.setData({
                 lock: true
             })
         }, 3000)
     },
 
-    drawTurntable: function (ctx, x, y, r, colorArr, num) {
-        var ctx = wx.createCanvasContext(ctx);
-        var numDeg = 360 / num;   //根据奖品数量求出绘制扇形角度
-        var piNum = numDeg / 360;   //每一份所占比例
+    //canvas转盘绘制
+    drawTurntable: function (canvasId, circleX, circleY, circleR, colorArr, awardsLen) {
+        var ctx = wx.createCanvasContext(canvasId);
+        var itemDeg = 360 / awardsLen;   //根据奖品数量求出绘制扇形角度
+        var piItem = itemDeg / 360;   //每一份所占比例
         var color = null,       //绘制颜色
-            startAngle = 0,     //开始度数
-            endAngle = 0;       //结束度数
-        for (var i = 1; i <= num; i++) {
+            startAngle = 0,     //开始弧度
+            endAngle = 0;       //结束弧度
+        for (var i = 1; i <= awardsLen; i++) {
             startAngle = endAngle;
-            endAngle = piNum * i * Math.PI * 2;
-            for (var j = 0; j < colorArr.length; j++) {
-
-            }
+            endAngle = piItem * i * Math.PI * 2;
             if (i % 2) {
                 color = colorArr[1];
             } else {
                 color = colorArr[0];
             }
             ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.arc(x, y, r, startAngle, endAngle);
+            ctx.moveTo(circleX, circleY);   //每绘制一个扇形就将起点挪到圆心
+            ctx.arc(circleX, circleY, circleR, startAngle, endAngle);
             ctx.setFillStyle(color);
             ctx.fill();
         }
-        // Draw arc
+        // Draw arc     //圆心
         ctx.beginPath();
-        ctx.arc(187.5, 187.5, 20, 0, 2 * Math.PI);
+        ctx.arc(150, 150, 20, 0, 2 * Math.PI);
         ctx.setFillStyle('yellowgreen');
         ctx.fill();
-
         ctx.draw();
-    },
-
-    start: function () {
-        var i = this.data.i;            //获取i
-        var num = Math.round(Math.random() * 10);
-        var lock = this.data.lock;      //获取锁的状态
-        if (lock) {                     //如果开启状态
-            this.rotateAnimate(i, num);      //调用转盘旋转,传入i
-            i += 1;                     //让i++,并赋值
-            this.setData({
-                i: i,
-                lock: false             //同时上锁
-            })
-        }
-    },
-
-    /**
-     * 生命周期函数--监听页面加载
-     */
-    onLoad: function (options) {
-        this.drawTurntable(
-            'myCanvas',             //画布ID
-            187.5,                  //圆心起点横坐标
-            187.5,                  //圆心起点纵坐标
-            180,                    //半径
-            ['#FFF4D6', '#FFFFFF', '#f6f6f6'], //绘制颜色数组
-            12                      //扇形数量，同奖品数量
-        )
-    },
-
-    /**
-     * 生命周期函数--监听页面初次渲染完成
-     */
-    onReady: function () {
-
-    },
-
-    /**
-     * 生命周期函数--监听页面显示
-     */
-    onShow: function () {
-
-    },
-
-    /**
-     * 生命周期函数--监听页面隐藏
-     */
-    onHide: function () {
-
-    },
-
-    /**
-     * 生命周期函数--监听页面卸载
-     */
-    onUnload: function () {
-
-    },
-
-    /**
-     * 页面相关事件处理函数--监听用户下拉动作
-     */
-    onPullDownRefresh: function () {
-
-    },
-
-    /**
-     * 页面上拉触底事件的处理函数
-     */
-    onReachBottom: function () {
-
-    },
-
-    /**
-     * 用户点击右上角分享
-     */
-    onShareAppMessage: function () {
-
     }
 })
