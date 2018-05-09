@@ -16,6 +16,7 @@ Page({
         verifyDeg: null,                //转盘校验角度
         centerPoint: null,              //指针指向奖品中间刻度需要调整的度数
         lock: true,                     //防止用户多次点击
+        times: true,                     //抽奖次数,true为有次数
         awards: [
             {
                 'index': 0,
@@ -84,15 +85,24 @@ Page({
 
     // 点击开始按钮
     start: function () {
-        var awardsLen = this.data.defaultData.awardsLen;    //获取奖品数量
-        var winIndex = Math.random() * awardsLen >>> 0;//根据奖品数量取随机数
-        if( winIndex == null ) return;
-        var winName = winIndex == 0 ? '很遗憾，再接再厉！' : '恭喜您抽中' + this.data.awards[winIndex].name;      //获取奖品名称
         var lock = this.data.lock;      //获取锁的状态
-        if (lock) {                     //如果开启状态
-            this.rotateAnimate(winIndex, winName);      //调用转盘旋转
-            this.setData({
-                lock: false             //同时上锁
+        var times = this.data.times;    //获取抽奖次数
+        if (times) {
+            if (lock) {                     //如果开启状态
+                var awardsLen = this.data.defaultData.awardsLen;    //获取奖品数量
+                var winIndex = Math.random() * awardsLen >>> 0;//根据奖品数量取随机数
+                if (winIndex == null) return;
+                var winName = winIndex == 0 ? '很遗憾，再接再厉！' : '恭喜您抽中' + this.data.awards[winIndex].name;      //获取奖品名称
+                this.rotateAnimate(winIndex, winName);      //调用转盘旋转
+                this.setData({
+                    lock: false             //同时上锁
+                })
+            }
+        } else {
+            wx.showModal({
+                title: '提示',
+                content: '抽奖次数已用完!',
+                showCancel: false
             })
         }
     },
@@ -123,9 +133,15 @@ Page({
                 content:winName,
                 showCancel:false
             })
-            that.setData({
-                lock: true
-            })
+            if (winIndex < 2) {
+                that.setData({
+                    times: false
+                })
+            } else {
+                that.setData({
+                    lock: true
+                })
+            }
         }, 3000)
     },
 
