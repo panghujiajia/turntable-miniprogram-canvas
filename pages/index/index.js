@@ -85,7 +85,7 @@ Page({
     // 点击开始按钮
     start: function () {
         var awardsLen = this.data.defaultData.awardsLen;    //获取奖品数量
-        var winIndex = Math.round(Math.random() * awardsLen);//根据奖品数量取随机数
+        var winIndex = Math.random() * awardsLen >>> 0;//根据奖品数量取随机数
         if( winIndex == null ) return;
         var winName = winIndex == 0 ? '很遗憾，再接再厉！' : '恭喜您抽中' + this.data.awards[winIndex].name;      //获取奖品名称
         var lock = this.data.lock;      //获取锁的状态
