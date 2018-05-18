@@ -52,7 +52,7 @@ Page({
             }
         ],
         runDegs: 0,                     //转盘上一次旋转的角度,默认0
-        runNum:null
+        runNum:6
     },
 
     /**
@@ -121,6 +121,7 @@ Page({
         var awardsLen = this.data.defaultData.awardsLen;    //奖品数量
         var centerPoint = this.data.centerPoint;            //奖品中心点度数
         var verifyDeg = this.data.verifyDeg;                //校验角度
+        // 新的度数 = 老的度数 + 360-老度数取模后的值 + 360*至少转的圈数 - 奖品*奖品度数 - 校验角度
         this.data.runDegs = this.data.runDegs + (360 - this.data.runDegs % 360) + (360 * runNum - winIndex * (360 / awardsLen)) - verifyDeg;
         this.animation = animation;
         animation.rotate(this.data.runDegs).step();  //首次点击获取同时启动定时器
